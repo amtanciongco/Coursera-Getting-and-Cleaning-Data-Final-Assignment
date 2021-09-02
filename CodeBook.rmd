@@ -1,0 +1,132 @@
+---
+title: "CodeBook"
+author: "amtanciongco"
+date: "9/2/2021"
+output: html_document
+---
+## Project Description
+Coursera "Getting and Cleaning Data" Final Assignment
+
+## Method Description 
+
+### Collection of the raw data
+Raw data was downloaded from https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip for the final assignment
+
+### Notes on the original (raw) data 
+Unzipped folder file contains 4 text files, "activity_labels.txt", "features.txt", "features_info.txt" and "README.txt", and 2 subfolders, "test" and "train". The subfolder respectively refers to testing and training data for the original dataset to be used for further analysis. "README.txt" contains the general description of where the dataset came from and how the numbers were generated. "features_info.txt" is the original codebook for the data.
+
+For the subfolder files, the description of variables found in y_test.txt and y_train.txt respectively is found on "features.txt" in the main directory. X_test.txt and X_train.txt contains the ID for the activity, which is stated explicitly in "activity_labels.txt", also in main directory. Lastly, "subject_test.txt" and "subject_train.txt" contains the numerical ID for the person/subjects who were sampled for the project. 
+
+Lastly, each train and test subfolders contain another subfolder named "Inertial Signals" which will not be touched on this assignment.
+
+## Creating the tidy datafile
+
+### Guide to create the tidy data file
+1. Download the data
+2. Read the data, in this case in R
+3. Properly label each column
+4. See the summary and structure of the dataset using summary() and str() functions, and the like. In case of NAs value, edit depending on what is necessary for the data
+5. Merge datasets/columns if necessary. 
+6. Use dplyr package for easier dataframe modification. Make sure that tidy data contains only one observation per row and one variable per column.
+
+### Detailed personal step-by-step analysis for this assignment with the original R script
+
+1. First things first, the file was downloaded from the link manually and unzipped. Then, in R, the  working directory is set and the necessary libraries are read.
+
+```{r}
+setwd("D:/Grad/Coursera/Getting and Cleaning Data/UCI HAR Dataset")
+library(plyr)
+library(dplyr)
+```
+
+2. read.table() function was used to read the necessary dataset.
+
+```{r}
+x_train <- read.table("./train/X_train.txt")
+y_train <- read.table("./train/y_train.txt")
+subject_train <- read.table("./train/subject_train.txt")
+x_test <- read.table("./test/X_test.txt")
+y_test <- read.table("./test/y_test.txt")
+subject_test <- read.table("./test/subject_test.txt")
+```
+
+3. read.table() function was also used to read the txt files for the variable names
+
+```{r}
+feature_labels <- read.table("./features.txt",)
+activity_labels <- read.table("./activity_labels.txt")
+```
+
+4. First, the ID under the features.txt was discarded. Then, it was appended as variable names for the x data in both test and train subjects. Lastly, the column name for the subject too was edited. The join() function was used for y text files and activity labels to match the explicit activity to their corresponding numeric IDs contained in the y text files.
+
+```{r}
+feature_labels <- feature_labels[,-1]
+names(x_train) <- feature_labels; names(x_test) <- feature_labels
+names(subject_train) <- "Subject_Number"; names(subject_test) <- "Subject_Number"
+y_train_labeled <- join(y_train,activity_labels); y_test_labeled <- join(y_test,activity_labels)
+names(y_train_labeled) <- c("ID","Activity"); names(y_test_labeled) <- c("ID","Activity")
+```
+
+
+(Optional step only: I set the subject IDs as.numeric in order to make each subject test number a fixed width (i.e. 01,02,...,30) for better sorting in the latter steps.)
+
+```{r}
+subject_test$Subject_Number <- as.numeric(subject_test$Subject_Number)
+subject_train$Subject_Number <- as.numeric(subject_train$Subject_Number)
+subject_test$Subject_Number <- sprintf('%02d', subject_test$Subject_Number)
+subject_train$Subject_Number <- sprintf('%02d', subject_train$Subject_Number)
+```
+
+5. First the cbind() function was used to bind columnwise the subject ID, the activity, and the corresponding data for respectively train and test subjects. Then, the rbind() function was used to bind the column-binded test and train data. The product of this compounded functions is in the merged variable. 
+
+```{r}
+merged <- rbind(cbind(set="test",subject_test,y_test_labeled,x_test),cbind(set="train",subject_train,y_train_labeled,x_train))
+merged$Subject <- paste(merged$set, merged$Subject_Number,sep="_")
+```
+
+6. Using the dplyr package, the merged data was subset so that only columns with "mean" and "std" remains.
+```{r}
+merged <- merged %>% select("Subject","Activity",contains(c("mean","std")))
+```
+
+(Optional step only: Because I didn't like the column naming on the original dataset, I changed it for my tidy data. This step is only for aesthetics)
+
+```{r}
+y <- names(merged)
+y <- gsub("^t","Time_",y)
+y <- gsub("^f","Frequency_",y)
+y <- gsub("^angle\\(","Angle_",y)
+y <- gsub("Jerk","Jerk_",y)
+y <- gsub("Mag","Mag_",y)
+y <- gsub("BodyAcc", "BodyAcceleration_",y)
+y <- gsub("BodyGyro", "BodyGyro_",y)
+y <- gsub("GravityAcc", "GravityAcceleration_",y)
+y <- gsub("-std","StandardDeviation_",y)
+y <- gsub("(-)[Mm]ean","Mean_",y)
+y <- gsub("\\(\\)|\\)","",y)
+y <- gsub("-","",y)
+y <- gsub(",","_",y)
+y <- gsub("tBody","Time_Body",y)
+names(merged) <- y
+```
+
+7. Since tidy data contains only one observation per row and one variable per column, merged data is not yet complete. Using the dplyr package, the group_by function was used to group the merged dataset by the subject ID and corresponding activity, and then the summarise function was used in the remaining columns to get the average of numbers per group.
+
+```{r}
+merged_tidydata <- merged %>% group_by(Subject, Activity) %>% summarise(across(everything(), mean))
+```
+
+(Optional step only: In order to see if I did my job well, I used the View() function to view my tidy data)
+
+```{r}
+View(merged_tidydata)
+```
+
+
+### Variable Description
+Subject - contains brief description of whether the subject is under test or training set and their corresponding subject ID. i.e. test_02
+
+Activity - the activity performed by the Subject
+
+(the rest) - each column pertains to the average of number of trials done by each subject per activity
+
