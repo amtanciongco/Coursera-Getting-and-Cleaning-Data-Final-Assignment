@@ -11,4 +11,4 @@ Via Opera Pia 11A, I-16145, Genoa, Italy.
 activityrecognition@smartlab.ws
 www.smartlab.ws
 
-The task for the final assignment in this course was to download the dataset from the above study and make it a clean and tidy data. Detailed steps on how it was conducted can be found in "CodeBook.rmd". The final and complete R script written by the author is found in "code.R". The tidy data is saved as "uci_har_tidy.csv" for viewing purposes.
+The task for the final assignment in this course was to download the dataset from the above study and make it a clean and tidy data. Detailed steps on how it was conducted can be found in "CodeBook.rmd". The final and complete R script written by the author is found in "run_analysis.R". The tidy data is saved as "uci_har_tidy.csv" for viewing purposes.
